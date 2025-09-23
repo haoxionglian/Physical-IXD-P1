@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Anime Search Demo — Jikan API</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#60a5fa;--muted:#94a3b8}
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;color:white;background:linear-gradient(180deg,#071029 0%, #071833 100%);margin:0;padding:24px}
+    .container{max-width:980px;margin:0 auto}
+    header{display:flex;gap:12px;align-items:center}
+    h1{margin:0;font-size:20px}
+    .search{display:flex;gap:8px;margin-top:18px}
+    input[type=text]{flex:1;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:inherit;font-size:15px}
+    button{padding:10px 14px;border-radius:10px;border:0;background:var(--accent);color:#012;background-image:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.08));cursor:pointer}
+    .hint{color:var(--muted);margin-top:8px;font-size:13px}
+
+    .results{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:18px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);display:flex;gap:10px}
+    .poster{width:80px;flex-shrink:0;border-radius:6px;overflow:hidden;background:#09121a}
+    .poster img{display:block;width:100%;height:100%;object-fit:cover}
+    .meta{flex:1;min-width:0}
+    .title{font-weight:600;margin:0 0 6px 0;font-size:15px}
+    .sub{font-size:13px;color:var(--muted);margin-bottom:8px}
+    .score{display:inline-block;padding:4px 7px;border-radius:8px;background:rgba(255,255,255,0.03);font-weight:600;font-size:13px}
+    .synopsis{font-size:13px;color:#cfd8e3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+    .message{padding:14px;margin-top:18px;border-radius:10px;background:rgba(255,255,255,0.02);color:var(--muted)}
+    .loader{border:4px solid rgba(255,255,255,0.06);border-top-color:var(--accent);border-radius:50%;width:22px;height:22px;animation:spin 1s linear infinite;margin-right:8px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    footer{margin-top:22px;color:var(--muted);font-size:13px}
+    a.link{color:var(--accent);text-decoration:none}
+
+    @media (max-width:520px){.poster{width:66px}.search{flex-direction:column}button{width:100%}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Anime Search Demo</h1>
+        <div class="hint">使用免费公共 Jikan (MyAnimeList) API 搜索动漫并显示结果</div>
+      </div>
+    </header>
+
+    <div class="search" style="margin-bottom:6px">
+      <input id="q" type="text" placeholder="输入动画名称（例如: one piece / naruto）然后回车或点击搜索" />
+      <button id="searchBtn">搜索</button>
+    </div>
+
+    <div id="status" class="message" style="display:none"></div>
+
+    <div id="results" class="results"></div>
+
+    <footer>数据来自 <a class="link" href="https://jikan.moe/" target="_blank" rel="noreferrer">Jikan API</a>. Demo 可直接在本地保存为 <code>anime-search-demo.html</code> 并在浏览器中打开。</footer>
+  </div>
+
+  <script>
+    // 简单的客户端 demo：使用 Jikan v4 的 /anime?q= 端点
+    const qInput = document.getElementById('q');
+    const btn = document.getElementById('searchBtn');
+    const resultsEl = document.getElementById('results');
+    const statusEl = document.getElementById('status');
+
+    function showStatus(text, isLoading = false){
+      statusEl.style.display = text ? 'block' : 'none';
+      statusEl.innerHTML = isLoading ? `<span style="display:flex;align-items:center"><span class="loader"></span>${text}</span>` : text;
+    }
+
+    async function searchAnime(query){
+      if(!query || !query.trim()){
+        showStatus('请输入搜索关键词。');
+        return;
+      }
+      resultsEl.innerHTML = '';
+      showStatus('正在搜索…', true);
+
+      try{
+        // Jikan 支持跨域，limit 参数控制返回数量
+        const url = `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&limit=12`;
+        const res = await fetch(url);
+        if(!res.ok) throw new Error(`网络响应: ${res.status}`);
+        const data = await res.json();
+
+        const list = data.data || [];
+        if(list.length === 0){
+          showStatus('未找到匹配的结果。');
+          return;
+        }
+
+        showStatus('');
+        // 渲染卡片
+        list.forEach(item => {
+          const card = document.createElement('article');
+          card.className = 'card';
+
+          const poster = document.createElement('div');
+          poster.className = 'poster';
+          const img = document.createElement('img');
+          img.alt = item.title;
+          img.src = item.images?.jpg?.image_url || '';
+          poster.appendChild(img);
+
+          const meta = document.createElement('div');
+          meta.className = 'meta';
+
+          const title = document.createElement('h3');
+          title.className = 'title';
+          // title + link to MAL
+          const a = document.createElement('a');
+          a.textContent = item.title;
+          a.href = item.url || '#';
+          a.target = '_blank';
+          a.rel = 'noreferrer';
+          a.style.color = 'inherit';
+          a.style.textDecoration = 'none';
+          title.appendChild(a);
+
+          const sub = document.createElement('div');
+          sub.className = 'sub';
+          sub.innerHTML = `${item.type || '-'} • ${item.episodes ?? '-'} eps • <span class="score">${item.score ?? '—'}</span>`;
+
+          const synopsis = document.createElement('p');
+          synopsis.className = 'synopsis';
+          synopsis.textContent = item.synopsis || '暂无简介。';
+
+          meta.appendChild(title);
+          meta.appendChild(sub);
+          meta.appendChild(synopsis);
+
+          card.appendChild(poster);
+          card.appendChild(meta);
+
+          resultsEl.appendChild(card);
+        });
+
+      }catch(err){
+        console.error(err);
+        showStatus('搜索失败：' + (err.message || err));
+      }
+    }
+
+    // 事件处理
+    btn.addEventListener('click', ()=> searchAnime(qInput.value));
+    qInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') searchAnime(qInput.value); });
+
+    // Demo: 使用节流/防抖（可选），这里给用户示例：在输入停止 600ms 后自动搜索
+    let debounceTimer = null;
+    qInput.addEventListener('input', ()=>{
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(()=>{
+        const v = qInput.value.trim();
+        if(v.length >= 2) searchAnime(v);
+      }, 600);
+    });
+  </script>
+</body>
+</html>
