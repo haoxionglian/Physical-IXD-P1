@@ -41,20 +41,20 @@
     <header>
       <div>
         <h1>Anime Search Demo</h1>
-        <div class="hint">使用免费公共 Jikan (MyAnimeList) API 搜索动漫并显示结果</div>
+        <div class="hint">Search for anime using the free public Jikan (MyAnimeList) API and display the results.</div>
       </div>
     </header>
 
     <div class="search" style="margin-bottom:6px">
-      <input id="q" type="text" placeholder="输入动画名称（例如: one piece / naruto）然后回车或点击搜索" />
-      <button id="searchBtn">搜索</button>
+      <input id="q" type="text" placeholder="Enter the anime name (e.g., One Piece / Naruto) then press Enter or click Search." />
+      <button id="searchBtn">Search</button>
     </div>
 
     <div id="status" class="message" style="display:none"></div>
 
     <div id="results" class="results"></div>
 
-    <footer>数据来自 <a class="link" href="https://jikan.moe/" target="_blank" rel="noreferrer">Jikan API</a>. Demo 可直接在本地保存为 <code>anime-search-demo.html</code> 并在浏览器中打开。</footer>
+    <footer>数据来自 <a class="link" href="https://jikan.moe/" target="_blank" rel="noreferrer">Jikan API</a>. Demo You can save it directly locally as <code>anime-search-demo.html</code> and open it in your browser.</footer>
   </div>
 
   <script>
@@ -75,7 +75,7 @@
         return;
       }
       resultsEl.innerHTML = '';
-      showStatus('正在搜索…', true);
+      showStatus('Searching…', true);
 
       try{
         // Jikan 支持跨域，limit 参数控制返回数量
@@ -138,7 +138,7 @@
 
       }catch(err){
         console.error(err);
-        showStatus('搜索失败：' + (err.message || err));
+        showStatus('Search failed：' + (err.message || err));
       }
     }
 
